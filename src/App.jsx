@@ -5,6 +5,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import RegisterRestaurant from './pages/RegisterRestaurant';
 import RestaurantSelector from './pages/RestaurantSelector';
+import RestaurantSetup from './pages/RestaurantSetup';
 
 function ProtectedRoute({ children, requireAdmin }) {
   const { user } = useAuth();
@@ -25,6 +26,9 @@ export default function App() {
           <Route path="/register" element={<RegisterRestaurant />} />
           <Route path="/select-restaurant" element={
             <ProtectedRoute><RestaurantSelector /></ProtectedRoute>
+          } />
+          <Route path="/setup" element={
+            <ProtectedRoute requireAdmin><RestaurantSetup /></ProtectedRoute>
           } />
           <Route path="/admin-dashboard" element={
             <ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>

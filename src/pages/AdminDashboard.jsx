@@ -6,6 +6,7 @@ import StaffTable from '../components/StaffTable';
 import RosterTable from '../components/RosterTable';
 import RequestsPanel from '../components/RequestsPanel';
 import ScheduleBuilder from '../components/ScheduleBuilder';
+import RestaurantSettings from './RestaurantSettings';
 import Toast from '../components/Toast';
 import { useAdminNotifications } from '../hooks/useNotifications';
 import { getUpcomingWeeks } from '../utils/weekUtils';
@@ -20,6 +21,7 @@ export default function AdminDashboard() {
   const [roster, setRoster] = useState(null);
   const [loadingRoster, setLoadingRoster] = useState(false);
   const [showRequests, setShowRequests] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState('roster');
   const { pendingCount, toast, refresh } = useAdminNotifications();
 
@@ -39,7 +41,6 @@ export default function AdminDashboard() {
   useEffect(() => { fetchStaff(); }, []);
 
   const handleLogout = () => { logout(); navigate('/'); };
-
   const handleSwitchRestaurant = () => navigate('/select-restaurant');
 
   const handleGetRoster = async () => {
@@ -61,8 +62,8 @@ export default function AdminDashboard() {
     setActiveTab('roster');
   };
 
-  const shiftsToShow = roster?.shifts || [];
   const isSuperAdmin = user?.role === 'superadmin';
+  const shiftsToShow = roster?.shifts || [];
 
   return (
     <div className="dashboard">
@@ -73,7 +74,6 @@ export default function AdminDashboard() {
           <span className="brand-icon">◈</span>
           <div>
             <span>RoosterApp</span>
-            {/* ✅ Mostrar nombre del restaurante activo */}
             {user?.restaurantName && (
               <span style={{ fontSize: '0.7rem', color: 'var(--blush)', display: 'block', marginTop: '-2px' }}>
                 {user.restaurantName}
@@ -85,11 +85,16 @@ export default function AdminDashboard() {
           <span className="user-chip">{user?.name}</span>
           <span className="badge admin">{isSuperAdmin ? 'Super' : 'Admin'}</span>
 
-          {/* ✅ Botón switch restaurant solo para superadmin */}
+          {/* Settings */}
+          <button className="btn-ghost" onClick={() => setShowSettings(!showSettings)}
+            title="Restaurant settings" style={{ fontSize: '0.9rem' }}>
+            ⚙️
+          </button>
+
+          {/* Switch restaurant — solo superadmin */}
           {isSuperAdmin && (
             <button className="btn-ghost" onClick={handleSwitchRestaurant}
-              title="Switch restaurant"
-              style={{ fontSize: '0.8rem' }}>
+              title="Switch restaurant" style={{ fontSize: '0.8rem' }}>
               🏠 Switch
             </button>
           )}
@@ -119,9 +124,13 @@ export default function AdminDashboard() {
           <RequestsPanel onUpdate={() => { refresh(); fetchStaff(); }} />
         )}
 
+        {/* ✅ Settings panel */}
+        {showSettings && (
+          <RestaurantSettings onClose={() => setShowSettings(false)} />
+        )}
+
         <StaffTable staff={staff} onRefresh={fetchStaff} />
 
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button onClick={() => setActiveTab('roster')}
             className={activeTab === 'roster' ? 'btn-primary' : 'btn-ghost'}
