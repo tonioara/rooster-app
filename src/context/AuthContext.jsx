@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { registerPushNotifications } from '../utils/pushUtils';
 
 const AuthContext = createContext(null);
 
@@ -8,10 +9,15 @@ export function AuthProvider({ children }) {
     return stored ? JSON.parse(stored) : null;
   });
 
-  const login = (userData, token) => {
+  useEffect(() => {
+    if (user) registerPushNotifications();
+  }, []);
+
+  const login = async (userData, token) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
+    await registerPushNotifications();
   };
 
   const logout = () => {
