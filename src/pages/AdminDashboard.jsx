@@ -22,7 +22,7 @@ export default function AdminDashboard() {
   const [showRequests, setShowRequests] = useState(false);
   const { pendingCount, toast, refresh } = useAdminNotifications();
 
-  const today = new Date().toLocaleDateString('es-ES', {
+  const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
 
@@ -31,7 +31,7 @@ export default function AdminDashboard() {
       const { data } = await API.get('/api/users/');
       setStaff(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error al cargar staff:', err.message);
+      console.error('Error loading staff:', err.message);
     }
   };
 
@@ -40,27 +40,27 @@ export default function AdminDashboard() {
   const handleLogout = () => { logout(); navigate('/'); };
 
   const handleGenerateRoster = async () => {
-    if (!weekId.trim()) return alert('⚠️ Seleccioná una semana primero.');
+    if (!weekId.trim()) return alert('⚠️ Please select a week first.');
     setGeneratingRoster(true);
     try {
       const { data } = await API.post('/api/roster/generate', { weekId });
-      alert('✅ Roster generado.');
+      alert('✅ Roster generated successfully.');
       setRoster(data.roster);
     } catch (err) {
-      alert(`❌ ${err.response?.data?.message || 'Error al generar.'}`);
+      alert(`❌ ${err.response?.data?.message || 'Error generating roster.'}`);
     } finally {
       setGeneratingRoster(false);
     }
   };
 
   const handleGetRoster = async () => {
-    if (!weekId.trim()) return alert('⚠️ Seleccioná una semana.');
+    if (!weekId.trim()) return alert('⚠️ Please select a week.');
     setLoadingRoster(true);
     try {
       const { data } = await API.get(`/api/roster/${weekId}`);
       setRoster(data);
     } catch {
-      alert('❌ No se encontró roster para esa semana.');
+      alert('❌ No roster found for this week.');
       setRoster(null);
     } finally {
       setLoadingRoster(false);
@@ -96,35 +96,32 @@ export default function AdminDashboard() {
               </span>
             )}
           </button>
-          <button className="btn-ghost" onClick={handleLogout}>Salir</button>
+          <button className="btn-ghost" onClick={handleLogout}>Sign out</button>
         </div>
       </header>
 
       <main className="dash-main">
         {showRequests && (
-          <RequestsPanel onUpdate={() => {
-            refresh();        // ✅ Resetea el contador de la campana
-            fetchStaff();
-          }} />
+          <RequestsPanel onUpdate={() => { refresh(); fetchStaff(); }} />
         )}
 
         <StaffTable staff={staff} onRefresh={fetchStaff} />
 
         <div className="roster-section">
           <div className="section-header">
-            <h2>Gestión de Roster</h2>
+            <h2>Roster Management</h2>
             <span style={{ fontSize: '0.8rem', color: 'var(--ink-muted)' }}>{today}</span>
           </div>
           <div className="roster-query" style={{ marginBottom: '0.75rem' }}>
             <select value={weekId} onChange={e => setWeekId(e.target.value)} style={{ maxWidth: '280px' }}>
-              <option value="">Seleccioná una semana...</option>
+              <option value="">Select a week...</option>
               {WEEKS.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
             </select>
             <button className="btn-accent" onClick={handleGenerateRoster} disabled={generatingRoster}>
-              {generatingRoster ? 'Generando...' : '⚡ Generar'}
+              {generatingRoster ? 'Generating...' : '⚡ Generate'}
             </button>
             <button className="btn-primary" onClick={handleGetRoster} disabled={loadingRoster}>
-              {loadingRoster ? 'Buscando...' : 'Consultar'}
+              {loadingRoster ? 'Loading...' : 'View'}
             </button>
           </div>
           <RosterTable

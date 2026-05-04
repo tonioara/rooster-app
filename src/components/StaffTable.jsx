@@ -21,27 +21,15 @@ export default function StaffTable({ staff, onRefresh }) {
       const skillsArray = formData.skills
         ? formData.skills.split(',').map(s => s.trim()).filter(Boolean)
         : [];
-
       if (editingId) {
-        await API.put(`/api/users/${editingId}`, {
-          name: formData.name,
-          role: formData.role,
-          skills: skillsArray,
-        });
+        await API.put(`/api/users/${editingId}`, { name: formData.name, role: formData.role, skills: skillsArray });
       } else {
-        await API.post('/api/users', {
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-          skills: skillsArray,
-        });
+        await API.post('/api/users', { name: formData.name, email: formData.email, password: formData.password, role: formData.role, skills: skillsArray });
       }
       resetForm();
       if (typeof onRefresh === 'function') onRefresh();
     } catch (error) {
-      const msg = error.response?.data?.message || 'Error al guardar.';
-      alert(`❌ ${msg}`);
+      alert(`❌ ${error.response?.data?.message || 'Error saving.'}`);
     } finally {
       setLoading(false);
     }
@@ -54,72 +42,68 @@ export default function StaffTable({ staff, onRefresh }) {
   };
 
   const handleDelete = async (id, name) => {
-    if (!window.confirm(`¿Eliminar a ${name}?`)) return;
+    if (!window.confirm(`Delete ${name} from staff?`)) return;
     try {
       await API.delete(`/api/users/${id}`);
       if (typeof onRefresh === 'function') onRefresh();
     } catch (error) {
-      alert(`❌ ${error.response?.data?.message || 'No se pudo eliminar.'}`);
+      alert(`❌ ${error.response?.data?.message || 'Could not delete.'}`);
     }
   };
 
   return (
     <div className="staff-section">
       <div className="section-header">
-        <h2>Personal</h2>
+        <h2>Staff</h2>
         <button className="btn-primary small" onClick={() => { resetForm(); setShowForm(!showForm); }}>
-          {showForm && !editingId ? 'Cancelar' : '+ Nuevo'}
+          {showForm && !editingId ? 'Cancel' : '+ New member'}
         </button>
       </div>
 
       {showForm && (
-        <form className="create-form" onSubmit={handleSubmit}>
-          <div className="form-row">
-            <input type="text" placeholder="Nombre completo"
-              value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
+        <form className="create-form" onSubmit={handleSubmit} style={{ flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <input type="text" placeholder="Full name"
+              value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
+              required style={{ flex: 1, minWidth: '150px' }} />
             <input type="email" placeholder="Email"
               value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })}
               required={!editingId} disabled={!!editingId}
-              style={{ opacity: editingId ? 0.6 : 1 }} />
+              style={{ flex: 1, minWidth: '150px', opacity: editingId ? 0.6 : 1 }} />
           </div>
-          <div className="form-row">
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             {!editingId && (
-              <input type="password" placeholder="Contraseña (mín. 6 caracteres)"
+              <input type="password" placeholder="Password (min. 6 characters)"
                 value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })}
-                required minLength={6} />
+                required minLength={6} style={{ flex: 1, minWidth: '200px' }} />
             )}
-            <select value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
-              <option value="FOH">FOH — Atención / Bar</option>
-              <option value="BOH">BOH — Cocina</option>
+            <select value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })} style={{ flex: 1 }}>
+              <option value="FOH">FOH — Front of house / Bar</option>
+              <option value="BOH">BOH — Kitchen</option>
               <option value="admin">Admin</option>
             </select>
           </div>
-          <input type="text" placeholder="Habilidades: bar, cocina..."
+          <input type="text" placeholder="Skills: bar, kitchen, service..."
             value={formData.skills} onChange={e => setFormData({ ...formData, skills: e.target.value })} />
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button type="submit" className="btn-primary" disabled={loading} style={{ flex: 1 }}>
-              {loading ? 'Guardando...' : editingId ? '💾 Guardar' : 'Crear'}
+              {loading ? 'Saving...' : editingId ? '💾 Save changes' : 'Create'}
             </button>
-            <button type="button" className="btn-ghost" onClick={resetForm}>Cancelar</button>
+            <button type="button" className="btn-ghost" onClick={resetForm}>Cancel</button>
           </div>
         </form>
       )}
 
-      {/* Tabla — visible en desktop */}
       <div className="table-wrapper">
         <table className="staff-table">
           <thead>
             <tr>
-              <th>Nombre</th>
-              <th>Email</th>
-              <th>Rol</th>
-              <th>Habilidades</th>
-              <th>Acciones</th>
+              <th>Name</th><th>Email</th><th>Role</th><th>Skills</th><th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {(!staff || staff.length === 0) && (
-              <tr><td colSpan={5} className="empty-row">Sin miembros registrados</td></tr>
+              <tr><td colSpan={5} className="empty-row">No staff members registered</td></tr>
             )}
             {staff && staff.map(member => (
               <tr key={member._id}>
@@ -129,7 +113,7 @@ export default function StaffTable({ staff, onRefresh }) {
                 <td>{(member.skills || []).join(', ') || '—'}</td>
                 <td style={{ display: 'flex', gap: '0.4rem' }}>
                   <button className="btn-ghost small" onClick={() => handleEdit(member)}>✏️</button>
-                  <button className="btn-danger small" onClick={() => handleDelete(member._id, member.name)}>Eliminar</button>
+                  <button className="btn-danger small" onClick={() => handleDelete(member._id, member.name)}>Delete</button>
                 </td>
               </tr>
             ))}
@@ -137,10 +121,9 @@ export default function StaffTable({ staff, onRefresh }) {
         </table>
       </div>
 
-      {/* Cards — visibles en mobile */}
       <div className="staff-card-list">
         {(!staff || staff.length === 0) && (
-          <p style={{ textAlign: 'center', color: 'var(--ink-muted)', padding: '1.5rem' }}>Sin miembros registrados</p>
+          <p style={{ textAlign: 'center', color: 'var(--ink-muted)', padding: '1.5rem' }}>No staff members registered</p>
         )}
         {staff && staff.map(member => (
           <div key={member._id} className="staff-card">
@@ -148,13 +131,11 @@ export default function StaffTable({ staff, onRefresh }) {
               <div className="staff-card-name">{member.name}</div>
               <div className="staff-card-email">{member.email || '—'}</div>
               <span className={`badge ${member.role === 'admin' ? 'admin' : member.role === 'FOH' ? 'manager' : 'employee'}`}>{member.role}</span>
-              {member.skills?.length > 0 && (
-                <div className="staff-card-skills" style={{ marginTop: '0.4rem' }}>{member.skills.join(', ')}</div>
-              )}
+              {member.skills?.length > 0 && <div className="staff-card-skills" style={{ marginTop: '0.4rem' }}>{member.skills.join(', ')}</div>}
             </div>
             <div className="staff-card-actions">
               <button className="btn-ghost small" onClick={() => handleEdit(member)}>✏️</button>
-              <button className="btn-danger small" onClick={() => handleDelete(member._id, member.name)}>Eliminar</button>
+              <button className="btn-danger small" onClick={() => handleDelete(member._id, member.name)}>Delete</button>
             </div>
           </div>
         ))}

@@ -11,17 +11,13 @@ const SHIFT_TIMES = {
   },
 };
 
-const DAYS_ORDER = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const DAYS_ORDER = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday',
+                    'Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 
 function getDayOff(shifts, day) {
   const allEmployees = new Set();
-  shifts.forEach(s => {
-    const name = s.employee?.name || s.employee;
-    if (name) allEmployees.add(name);
-  });
-  const workingToday = new Set(
-    shifts.filter(s => s.day === day).map(s => s.employee?.name || s.employee)
-  );
+  shifts.forEach(s => { const name = s.employee?.name || s.employee; if (name) allEmployees.add(name); });
+  const workingToday = new Set(shifts.filter(s => s.day === day).map(s => s.employee?.name || s.employee));
   return [...allEmployees].filter(e => !workingToday.has(e));
 }
 
@@ -30,37 +26,28 @@ function getShiftTime(role, shiftType) {
 }
 
 function thStyle(bg, width) {
-  return {
-    backgroundColor: bg, color: '#fff', padding: '10px 14px',
-    textAlign: 'left', fontWeight: '700', fontSize: '0.78rem',
-    letterSpacing: '0.05em', textTransform: 'uppercase', width,
-    borderRight: '1px solid rgba(255,255,255,0.1)',
-  };
+  return { backgroundColor: bg, color: '#fff', padding: '10px 14px', textAlign: 'left', fontWeight: '700', fontSize: '0.78rem', letterSpacing: '0.05em', textTransform: 'uppercase', width, borderRight: '1px solid rgba(255,255,255,0.1)' };
 }
 
 const tdStyle = { padding: '10px 14px', verticalAlign: 'top', borderRight: '1px solid #ccc', color: '#333' };
 
 function shiftRowStyle(idx, total) {
-  return {
-    paddingBottom: idx < total - 1 ? '6px' : '0',
-    marginBottom: idx < total - 1 ? '6px' : '0',
-    borderBottom: idx < total - 1 ? '1px solid rgba(0,0,0,0.08)' : 'none',
-  };
+  return { paddingBottom: idx < total - 1 ? '6px' : '0', marginBottom: idx < total - 1 ? '6px' : '0', borderBottom: idx < total - 1 ? '1px solid rgba(0,0,0,0.08)' : 'none' };
 }
 
 export default function RosterTable({ rosterData, weekId, dateViewed }) {
   if (!rosterData || rosterData.length === 0) {
     return (
       <div style={{ marginTop: '1.5rem', textAlign: 'center', color: 'var(--ink-muted)', padding: '2rem' }}>
-        <p>No hay turnos para la semana: <strong>{weekId || '—'}</strong></p>
-        <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>Generá el roster primero con ⚡ Generar</p>
+        <p>No shifts for week: <strong>{weekId || '—'}</strong></p>
+        <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>Generate the roster first with ⚡ Generate</p>
       </div>
     );
   }
 
   const byDay = {};
   rosterData.forEach(shift => {
-    const day = shift.day || 'Sin día';
+    const day = shift.day || 'No day';
     if (!byDay[day]) byDay[day] = { Mañana: [], Tarde: [] };
     const type = shift.shiftType === 'Mañana' ? 'Mañana' : 'Tarde';
     byDay[day][type].push(shift);
@@ -72,7 +59,7 @@ export default function RosterTable({ rosterData, weekId, dateViewed }) {
     <div style={{ marginTop: '1.5rem' }}>
       {weekId && (
         <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.8rem', color: 'var(--ink-muted)' }}>Semana: <strong>{weekId}</strong></span>
+          <span style={{ fontSize: '0.8rem', color: 'var(--ink-muted)' }}>Week: <strong>{weekId}</strong></span>
           {dateViewed && <span style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>{dateViewed}</span>}
         </div>
       )}
@@ -80,7 +67,7 @@ export default function RosterTable({ rosterData, weekId, dateViewed }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', fontFamily: 'Georgia, serif' }}>
           <thead>
             <tr>
-              <th style={thStyle('#2d2d2d', '15%')}>Día</th>
+              <th style={thStyle('#2d2d2d', '15%')}>Day</th>
               <th style={thStyle('#4a4a4a', '42%')}>🌅 Lunch</th>
               <th style={thStyle('#2d2d2d', '43%')}>🌙 Dinner</th>
             </tr>
@@ -94,16 +81,12 @@ export default function RosterTable({ rosterData, weekId, dateViewed }) {
                 <tr key={day} style={{ backgroundColor: isEven ? '#f5f5f5' : '#e8e8e8' }}>
                   <td style={{ padding: '12px 14px', fontWeight: '700', color: '#1a1a1a', borderRight: '1px solid #ccc', verticalAlign: 'top' }}>
                     <div>{day}</div>
-                    {offPeople.length > 0 && (
-                      <div style={{ fontSize: '0.7rem', color: '#888', fontWeight: '400', marginTop: '2px' }}>
-                        {offPeople.join(', ')} Off
-                      </div>
-                    )}
+                    {offPeople.length > 0 && <div style={{ fontSize: '0.7rem', color: '#888', fontWeight: '400', marginTop: '2px' }}>{offPeople.join(', ')} Off</div>}
                   </td>
                   <td style={tdStyle}>
                     {dayShifts.Mañana.length === 0 ? <span style={{ color: '#aaa' }}>—</span>
                       : dayShifts.Mañana.map((shift, idx) => {
-                          const name = shift.employee?.name || shift.employee || 'Empleado';
+                          const name = shift.employee?.name || shift.employee || 'Employee';
                           const role = shift.role || 'FOH';
                           const times = getShiftTime(role, 'Mañana');
                           return (
@@ -118,7 +101,7 @@ export default function RosterTable({ rosterData, weekId, dateViewed }) {
                   <td style={tdStyle}>
                     {dayShifts.Tarde.length === 0 ? <span style={{ color: '#aaa' }}>—</span>
                       : dayShifts.Tarde.map((shift, idx) => {
-                          const name = shift.employee?.name || shift.employee || 'Empleado';
+                          const name = shift.employee?.name || shift.employee || 'Employee';
                           const role = shift.role || 'FOH';
                           const times = getShiftTime(role, 'Tarde');
                           return (
