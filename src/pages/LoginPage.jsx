@@ -4,6 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import API from '../api/client';
 
+const LANGS = [
+  { code: 'es', label: '🇦🇷 ES' },
+  { code: 'en', label: '🇬🇧 EN' },
+  { code: 'zh', label: '🇨🇳 中文' },
+];
+
 export default function LoginPage() {
   const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
@@ -30,23 +36,29 @@ export default function LoginPage() {
     }
   };
 
-  const toggleLang = () => {
-    const next = i18n.language.startsWith('es') ? 'en' : 'es';
-    i18n.changeLanguage(next);
-  };
+  // ✅ Fix: usamos i18n.language con fallback seguro
+  const currentCode = (i18n.language || 'es').substring(0, 2);
+  const currentIdx = LANGS.findIndex(l => l.code === currentCode);
+  const nextLang = LANGS[(currentIdx < 0 ? 0 : currentIdx + 1) % LANGS.length];
 
   return (
     <div className="login-page">
       <div className="login-card">
-        {/* Selector de idioma */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
-          <button onClick={toggleLang} style={{
-            background: 'transparent', border: '1.5px solid var(--border)',
-            borderRadius: '20px', padding: '0.2rem 0.75rem',
-            fontSize: '0.75rem', cursor: 'pointer', color: 'var(--ink-muted)',
-            fontFamily: 'inherit',
-          }}>
-            {i18n.language.startsWith('es') ? '🇬🇧 EN' : '🇦🇷 ES'}
+          <button
+            onClick={() => i18n.changeLanguage(nextLang.code)}
+            style={{
+              background: 'transparent',
+              border: '1.5px solid var(--border)',
+              borderRadius: '20px',
+              padding: '0.2rem 0.75rem',
+              fontSize: '0.75rem',
+              cursor: 'pointer',
+              color: 'var(--ink-muted)',
+              fontFamily: 'inherit',
+            }}
+          >
+            {nextLang.label}
           </button>
         </div>
 
@@ -76,7 +88,8 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t('login.placeholder_password')}
-                required style={{ paddingRight: '2.5rem' }}
+                required
+                style={{ paddingRight: '2.5rem' }}
               />
               <button type="button" onClick={() => setShowPassword(!showPassword)}
                 style={{
