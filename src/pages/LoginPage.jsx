@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import API from '../api/client';
 
@@ -21,8 +21,7 @@ export default function LoginPage() {
       login(data.user, data.token);
       navigate(data.redirectUrl);
     } catch (err) {
-      const msg = err.response?.data?.message || 'Login error.';
-      setError(msg);
+      setError(err.response?.data?.message || 'Login error.');
     } finally {
       setLoading(false);
     }
@@ -41,7 +40,7 @@ export default function LoginPage() {
           <div className="field-group">
             <label htmlFor="email">Email</label>
             <input id="email" type="email" value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
               placeholder="you@email.com" required autoFocus />
           </div>
 
@@ -50,7 +49,7 @@ export default function LoginPage() {
             <div style={{ position: 'relative' }}>
               <input id="password"
                 type={showPassword ? 'text' : 'password'}
-                value={password} onChange={(e) => setPassword(e.target.value)}
+                value={password} onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••" required style={{ paddingRight: '2.5rem' }} />
               <button type="button" onClick={() => setShowPassword(!showPassword)}
                 style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', color: 'var(--ink-muted)', padding: '0' }}>
@@ -65,10 +64,11 @@ export default function LoginPage() {
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
 
-          <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'var(--cream)', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
-            <strong style={{ display: 'block', marginBottom: '0.3rem' }}>Test credentials</strong>
-            <div>Admin → amber@rooster.com / amber123</div>
-            <div>Employee → crystal@rooster.com / crystal123</div>
+          <div style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--ink-muted)' }}>
+            New restaurant?{' '}
+            <Link to="/register" style={{ color: 'var(--rose-dark)', fontWeight: '600' }}>
+              Register here
+            </Link>
           </div>
         </form>
       </div>
