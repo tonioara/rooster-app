@@ -36,20 +36,23 @@ export default function RequestsPanel({ onUpdate }) {
     try {
       await API.patch(`/api/requests/${id}/status`, { status });
       await fetchRequests();
+      // ✅ Notificar al padre para que refresque el contador
       if (typeof onUpdate === 'function') onUpdate();
     } catch {
       alert('❌ Error al actualizar la solicitud.');
     }
   };
 
-  const filtered = requests.filter(r => filter === 'all' ? true : r.status === filter);
+  const filtered = requests.filter(r =>
+    filter === 'all' ? true : r.status === filter
+  );
   const pendingCount = requests.filter(r => r.status === 'Pending').length;
 
   return (
     <div className="requests-panel">
       <div className="section-header">
         <h2>
-          📋 Solicitudes del Staff
+          📋 Solicitudes
           {pendingCount > 0 && (
             <span style={{
               marginLeft: '0.5rem', background: 'var(--rose)', color: '#fff',
@@ -61,10 +64,12 @@ export default function RequestsPanel({ onUpdate }) {
           )}
         </h2>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-          {['Pending','Approved','Rejected','all'].map(f => (
+          {['Pending', 'Approved', 'Rejected', 'all'].map(f => (
             <button key={f} onClick={() => setFilter(f)}
               className={filter === f ? 'btn-primary small' : 'btn-ghost small'}>
-              {f === 'Pending' ? 'Pendientes' : f === 'Approved' ? 'Aprobadas' : f === 'Rejected' ? 'Rechazadas' : 'Todas'}
+              {f === 'Pending' ? 'Pendientes' :
+               f === 'Approved' ? 'Aprobadas' :
+               f === 'Rejected' ? 'Rechazadas' : 'Todas'}
             </button>
           ))}
         </div>
@@ -79,7 +84,7 @@ export default function RequestsPanel({ onUpdate }) {
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
-        {filtered.map((req) => {
+        {filtered.map(req => {
           const st = STATUS_STYLE[req.status] || STATUS_STYLE.Pending;
           return (
             <div key={req._id} style={{
@@ -122,7 +127,6 @@ export default function RequestsPanel({ onUpdate }) {
                   })}
                 </div>
               </div>
-
               {req.status === 'Pending' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flexShrink: 0 }}>
                   <button className="btn-primary small"

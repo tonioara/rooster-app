@@ -1,36 +1,49 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
-import NotificationButton from '../components/NotificationButton';
 import RosterTable from '../components/RosterTable';
 import RequestForm from '../components/RequestForm';
-import { getUpcomingWeeks } from '../utils/weekUtils';
+import Toast from '../components/Toast';
+import { useEmployeeNotifications } from '../hooks/useNotifications';
+import { getUpcomingWeeks, getWeekId } from '../utils/weekUtils';
 
 const WEEKS = getUpcomingWeeks(6);
 
 export default function EmployeeDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [weekId, setWeekId] = useState('');
+  // ✅ Arranca con la semana actual seleccionada
+  const [weekId, setWeekId] = useState(() => getWeekId(new Date()));
   const [roster, setRoster] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showRequest, setShowRequest] = useState(false);
+  const { toast } = useEmployeeNotifications(user?._id);
 
   const handleLogout = () => { logout(); navigate('/'); };
 
-  const handleGetRoster = async () => {
-    if (!weekId.trim()) return alert('⚠️ Seleccioná una semana.');
+  const handleGetRoster = async (id) => {
+    const wid = id || weekId;
+    if (!wid) return;
     setLoading(true);
     try {
-      const { data } = await API.get(`/api/roster/${weekId}`);
+      const { data } = await API.get(`/api/roster/${wid}`);
       setRoster(data);
     } catch {
-      alert('❌ No se encontró roster para esa semana.');
       setRoster(null);
     } finally {
       setLoading(false);
     }
+  };
+
+  // ✅ Carga el roster de la semana actual automáticamente al entrar
+  useEffect(() => {
+    handleGetRoster(getWeekId(new Date()));
+  }, []);
+
+  const handleWeekChange = (e) => {
+    setWeekId(e.target.value);
+    handleGetRoster(e.target.value);
   };
 
   const allShifts = roster?.shifts || [];
@@ -40,6 +53,7 @@ export default function EmployeeDashboard() {
 
   return (
     <div className="dashboard">
+      <Toast toast={toast} />
       <header className="dash-header">
         <div className="dash-brand">
           <span className="brand-icon">◈</span>
@@ -48,8 +62,7 @@ export default function EmployeeDashboard() {
         <div className="dash-user">
           <span className="user-chip">{user?.name}</span>
           <span className="badge employee">{user?.role}</span>
-          <button className="btn-ghost"
-            onClick={() => setShowRequest(!showRequest)}>
+          <button className="btn-ghost" onClick={() => setShowRequest(!showRequest)}>
             📨 Solicitar
           </button>
           <button className="btn-ghost" onClick={handleLogout}>Salir</button>
@@ -57,9 +70,7 @@ export default function EmployeeDashboard() {
       </header>
 
       <main className="dash-main">
-        {showRequest && (
-          <RequestForm onSuccess={() => setShowRequest(false)} />
-        )}
+        {showRequest && <RequestForm onSuccess={() => setShowRequest(false)} />}
 
         <div className="employee-card">
           <h2>Mi Perfil</h2>
@@ -76,9 +87,7 @@ export default function EmployeeDashboard() {
               <div className="info-row">
                 <span className="info-label">Habilidades</span>
                 <div className="skills-list">
-                  {user.skills.map(s => (
-                    <span key={s} className="skill-tag">{s}</span>
-                  ))}
+                  {user.skills.map(s => <span key={s} className="skill-tag">{s}</span>)}
                 </div>
               </div>
             )}
@@ -90,22 +99,39 @@ export default function EmployeeDashboard() {
             <h2>Mi Horario Semanal</h2>
           </div>
           <div className="roster-query">
-            <select value={weekId} onChange={e => setWeekId(e.target.value)} style={{ maxWidth: '280px' }}>
+            <select value={weekId} onChange={handleWeekChange} style={{ maxWidth: '280px' }}>
               <option value="">Seleccioná una semana...</option>
-              {WEEKS.map(w => (
-                <option key={w.id} value={w.id}>{w.label}</option>
-              ))}
+              {WEEKS.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
             </select>
-            <button className="btn-primary" onClick={handleGetRoster} disabled={loading}>
+            <button className="btn-primary" onClick={() => handleGetRoster(weekId)} disabled={loading}>
               {loading ? 'Buscando...' : 'Ver horario'}
             </button>
           </div>
-          {roster && (
+
+          {loading && (
+            <p style={{ color: 'var(--ink-muted)', padding: '1rem', textAlign: 'center' }}>
+              Cargando horario...
+            </p>
+          )}
+
+          {!loading && roster && myShifts.length === 0 && (
+            <p style={{ color: 'var(--ink-muted)', padding: '1rem', textAlign: 'center' }}>
+              No tenés turnos asignados esta semana.
+            </p>
+          )}
+
+          {!loading && roster && myShifts.length > 0 && (
             <RosterTable
-              rosterData={myShifts.length > 0 ? myShifts : allShifts}
+              rosterData={myShifts}
               weekId={roster?.weekId || weekId}
               dateViewed={new Date().toLocaleDateString('es-ES')}
             />
+          )}
+
+          {!loading && !roster && (
+            <p style={{ color: 'var(--ink-muted)', padding: '1rem', textAlign: 'center' }}>
+              No hay roster generado para esta semana todavía.
+            </p>
           )}
         </div>
       </main>
