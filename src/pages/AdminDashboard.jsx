@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
 import StaffTable from '../components/StaffTable';
 import RosterTable from '../components/RosterTable';
+import NotificationButton from '../components/NotificationButton';
 import RequestsBell from '../components/RequestsBell';
 import RequestsPanel from '../components/RequestsPanel';
 import { getUpcomingWeeks } from '../utils/weekUtils';
