@@ -40,6 +40,8 @@ export default function AdminDashboard() {
 
   const handleLogout = () => { logout(); navigate('/'); };
 
+  const handleSwitchRestaurant = () => navigate('/select-restaurant');
+
   const handleGetRoster = async () => {
     if (!weekId.trim()) return alert('⚠️ Please select a week.');
     setLoadingRoster(true);
@@ -60,6 +62,7 @@ export default function AdminDashboard() {
   };
 
   const shiftsToShow = roster?.shifts || [];
+  const isSuperAdmin = user?.role === 'superadmin';
 
   return (
     <div className="dashboard">
@@ -68,11 +71,29 @@ export default function AdminDashboard() {
       <header className="dash-header">
         <div className="dash-brand">
           <span className="brand-icon">◈</span>
-          <span>RoosterApp</span>
+          <div>
+            <span>RoosterApp</span>
+            {/* ✅ Mostrar nombre del restaurante activo */}
+            {user?.restaurantName && (
+              <span style={{ fontSize: '0.7rem', color: 'var(--blush)', display: 'block', marginTop: '-2px' }}>
+                {user.restaurantName}
+              </span>
+            )}
+          </div>
         </div>
         <div className="dash-user">
           <span className="user-chip">{user?.name}</span>
-          <span className="badge admin">Admin</span>
+          <span className="badge admin">{isSuperAdmin ? 'Super' : 'Admin'}</span>
+
+          {/* ✅ Botón switch restaurant solo para superadmin */}
+          {isSuperAdmin && (
+            <button className="btn-ghost" onClick={handleSwitchRestaurant}
+              title="Switch restaurant"
+              style={{ fontSize: '0.8rem' }}>
+              🏠 Switch
+            </button>
+          )}
+
           <button className="btn-ghost"
             onClick={() => setShowRequests(!showRequests)}
             style={{ position: 'relative' }}>
@@ -100,23 +121,20 @@ export default function AdminDashboard() {
 
         <StaffTable staff={staff} onRefresh={fetchStaff} />
 
-        {/* ✅ Tabs — View Roster vs Build Schedule */}
+        {/* Tabs */}
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button
-            onClick={() => setActiveTab('roster')}
+          <button onClick={() => setActiveTab('roster')}
             className={activeTab === 'roster' ? 'btn-primary' : 'btn-ghost'}
             style={{ flex: 1 }}>
             📋 View Roster
           </button>
-          <button
-            onClick={() => setActiveTab('builder')}
+          <button onClick={() => setActiveTab('builder')}
             className={activeTab === 'builder' ? 'btn-accent' : 'btn-ghost'}
             style={{ flex: 1 }}>
             ⚡ Build Schedule
           </button>
         </div>
 
-        {/* TAB: Ver roster existente */}
         {activeTab === 'roster' && (
           <div className="roster-section">
             <div className="section-header">
@@ -140,7 +158,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB: Construir schedule */}
         {activeTab === 'builder' && (
           <div>
             <div style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '1rem', marginBottom: '0.75rem' }}>
@@ -152,19 +169,14 @@ export default function AdminDashboard() {
                 {WEEKS.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
               </select>
             </div>
-
             {weekId ? (
               <ScheduleBuilder
-                staff={staff.filter(s => s.role !== 'admin')}
+                staff={staff.filter(s => s.role !== 'admin' && s.role !== 'superadmin')}
                 weekId={weekId}
                 onConfirmed={handleScheduleConfirmed}
               />
             ) : (
-              <div style={{
-                background: 'var(--card)', border: '1.5px solid var(--border)',
-                borderRadius: '16px', padding: '2rem', textAlign: 'center',
-                color: 'var(--ink-muted)',
-              }}>
+              <div style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: '16px', padding: '2rem', textAlign: 'center', color: 'var(--ink-muted)' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📅</div>
                 <p>Select a week above to start building the schedule</p>
               </div>

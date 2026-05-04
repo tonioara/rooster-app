@@ -10,14 +10,14 @@ export function AuthProvider({ children }) {
   });
 
   useEffect(() => {
-    if (user) registerPushNotifications();
+    if (user && user.restaurantId) registerPushNotifications();
   }, []);
 
   const login = async (userData, token) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
-    await registerPushNotifications();
+    if (userData.restaurantId) await registerPushNotifications();
   };
 
   const logout = () => {
