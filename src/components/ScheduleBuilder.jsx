@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import API from '../api/client';
 
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -15,8 +16,7 @@ function calcHours(start, end) {
   if (!start || !end) return 0;
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
-  const diff = (eh * 60 + em) - (sh * 60 + sm);
-  return Math.round(Math.max(0, diff) / 60 * 10) / 10;
+  return Math.round(Math.max(0, (eh * 60 + em) - (sh * 60 + sm)) / 60 * 10) / 10;
 }
 
 function ShiftCard({ shift, idx, day, onUpdate, onUpdateSplit }) {
@@ -25,12 +25,8 @@ function ShiftCard({ shift, idx, day, onUpdate, onUpdateSplit }) {
     : shift.hoursWorked;
 
   return (
-    <div style={{
-      background: '#fff', borderRadius: '10px', padding: '0.85rem',
-      marginBottom: '0.5rem', border: '1px solid var(--border)',
-    }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+    <div style={{ background: '#fff', borderRadius: '10px', padding: '0.85rem', marginBottom: '0.5rem', border: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.4rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <strong style={{ fontSize: '0.9rem' }}>{shift.employeeName}</strong>
           <span style={{
@@ -45,30 +41,26 @@ function ShiftCard({ shift, idx, day, onUpdate, onUpdateSplit }) {
             <span style={{ fontSize: '0.68rem', padding: '0.15rem 0.5rem', borderRadius: '20px', background: '#e8f4ff', color: '#1565c0', fontWeight: '700' }}>Split</span>
           )}
         </div>
-        <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--ink)' }}>
-          {totalHours.toFixed(1)}h total
-        </span>
+        <span style={{ fontSize: '0.82rem', fontWeight: '700' }}>{totalHours.toFixed(1)}h</span>
       </div>
 
       {/* Turno principal */}
-      <div style={{ background: 'var(--cream)', borderRadius: '8px', padding: '0.6rem 0.75rem', marginBottom: shift.isSplit ? '0.4rem' : '0' }}>
-        <div style={{ fontSize: '0.72rem', fontWeight: '700', color: 'var(--ink-muted)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-          {shift.isSplit ? '☀️ Lunch shift' : '⏰ Shift'}
+      <div style={{ background: '#fff8e1', borderRadius: '8px', padding: '0.6rem 0.75rem', marginBottom: shift.isSplit ? '0.4rem' : '0' }}>
+        <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#b8860b', marginBottom: '0.4rem' }}>
+          {shift.isSplit ? '🌅 Lunch' : '⏰ Shift'}
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <label style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', fontWeight: '600' }}>From</label>
             <input type="time" value={shift.startTime}
               onChange={e => onUpdate(idx, 'startTime', e.target.value)}
-              style={{ padding: '0.3rem 0.5rem', border: '1.5px solid var(--border)', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit' }}
-            />
+              style={{ padding: '0.3rem 0.5rem', border: '1.5px solid var(--border)', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit' }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <label style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', fontWeight: '600' }}>To</label>
             <input type="time" value={shift.endTime}
               onChange={e => onUpdate(idx, 'endTime', e.target.value)}
-              style={{ padding: '0.3rem 0.5rem', border: '1.5px solid var(--border)', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit' }}
-            />
+              style={{ padding: '0.3rem 0.5rem', border: '1.5px solid var(--border)', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit' }} />
           </div>
           <span style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>
             {calcHours(shift.startTime, shift.endTime)}h
@@ -76,40 +68,36 @@ function ShiftCard({ shift, idx, day, onUpdate, onUpdateSplit }) {
         </div>
       </div>
 
-      {/* Split shift — turno de vuelta */}
+      {/* Split — dinner */}
       {shift.isSplit && (
-        <div style={{ background: '#e8f4ff', borderRadius: '8px', padding: '0.6rem 0.75rem', marginBottom: '0.4rem' }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: '700', color: '#1565c0', marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-            🌙 Dinner shift (back)
+        <div style={{ background: '#e8eaf6', borderRadius: '8px', padding: '0.6rem 0.75rem', marginBottom: '0.4rem' }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#3949ab', marginBottom: '0.4rem' }}>
+            🌙 Dinner (back)
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <label style={{ fontSize: '0.72rem', color: '#1565c0', fontWeight: '600' }}>From</label>
-              <input type="time" value={shift.splitReturn || '17:30'}
+              <label style={{ fontSize: '0.72rem', color: '#3949ab', fontWeight: '600' }}>From</label>
+              <input type="time" value={shift.splitReturn || '17:00'}
                 onChange={e => onUpdateSplit(idx, 'splitReturn', e.target.value)}
-                style={{ padding: '0.3rem 0.5rem', border: '1.5px solid #90caf9', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit' }}
-              />
+                style={{ padding: '0.3rem 0.5rem', border: '1.5px solid #9fa8da', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-              <label style={{ fontSize: '0.72rem', color: '#1565c0', fontWeight: '600' }}>To</label>
+              <label style={{ fontSize: '0.72rem', color: '#3949ab', fontWeight: '600' }}>To</label>
               <input type="time" value={shift.splitEnd || '22:00'}
                 onChange={e => onUpdateSplit(idx, 'splitEnd', e.target.value)}
-                style={{ padding: '0.3rem 0.5rem', border: '1.5px solid #90caf9', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit' }}
-              />
+                style={{ padding: '0.3rem 0.5rem', border: '1.5px solid #9fa8da', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit' }} />
             </div>
-            <span style={{ fontSize: '0.78rem', color: '#1565c0' }}>
-              {calcHours(shift.splitReturn || '17:30', shift.splitEnd || '22:00')}h
+            <span style={{ fontSize: '0.78rem', color: '#3949ab' }}>
+              {calcHours(shift.splitReturn || '17:00', shift.splitEnd || '22:00')}h
             </span>
           </div>
         </div>
       )}
 
-      {/* Nota */}
       <input type="text" value={shift.note || ''}
         onChange={e => onUpdate(idx, 'note', e.target.value)}
         placeholder="Note (optional)"
-        style={{ width: '100%', padding: '0.3rem 0.6rem', border: '1.5px solid var(--border)', borderRadius: '6px', fontSize: '0.8rem', marginTop: '0.4rem', fontFamily: 'inherit', background: 'transparent' }}
-      />
+        style={{ width: '100%', padding: '0.3rem 0.6rem', border: '1.5px solid var(--border)', borderRadius: '6px', fontSize: '0.8rem', marginTop: '0.4rem', fontFamily: 'inherit', background: 'transparent' }} />
     </div>
   );
 }
@@ -125,6 +113,18 @@ export default function ScheduleBuilder({ staff, weekId, onConfirmed }) {
   const [warnings, setWarnings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [restaurant, setRestaurant] = useState(null);
+
+  // ✅ Cargar info del restaurante (incluye cortes lunch/dinner)
+  useEffect(() => {
+    const fetchRestaurant = async () => {
+      try {
+        const { data } = await API.get('/api/restaurants/my');
+        setRestaurant(data);
+      } catch {}
+    };
+    fetchRestaurant();
+  }, []);
 
   const toggleStaff = (day, empId) => {
     setDailyStaff(prev => {
@@ -140,7 +140,7 @@ export default function ScheduleBuilder({ staff, weekId, onConfirmed }) {
 
   const handleGetSuggestions = async () => {
     const activeDays = Object.entries(dailyStaff).filter(([, ids]) => ids.length > 0);
-    if (activeDays.length === 0) return alert('⚠️ Select staff for at least one day.');
+    if (activeDays.length === 0) return toast.warning('Select staff for at least one day.');
     setLoading(true);
     try {
       const { data } = await API.post('/api/schedule/suggest', { weekId, dailyStaff });
@@ -156,7 +156,7 @@ export default function ScheduleBuilder({ staff, weekId, onConfirmed }) {
       setEditedShifts(edited);
       setStep(2);
     } catch (err) {
-      alert(`❌ ${err.response?.data?.message || 'Error getting suggestions.'}`);
+      toast.error(`Error: ${err.response?.data?.message || 'Could not get suggestions.'}`);
     } finally {
       setLoading(false);
     }
@@ -182,7 +182,7 @@ export default function ScheduleBuilder({ staff, weekId, onConfirmed }) {
       dayShifts[idx] = { ...dayShifts[idx], [field]: value };
       if (field === 'splitReturn' || field === 'splitEnd') {
         dayShifts[idx].splitHours = calcHours(
-          dayShifts[idx].splitReturn || '17:30',
+          dayShifts[idx].splitReturn || '17:00',
           dayShifts[idx].splitEnd || '22:00'
         );
       }
@@ -196,27 +196,43 @@ export default function ScheduleBuilder({ staff, weekId, onConfirmed }) {
     try {
       const confirmedShifts = Object.values(editedShifts).flat();
       const { data } = await API.post('/api/schedule/confirm', { weekId, confirmedShifts });
+      toast.success('✅ Schedule confirmed!', { description: `Week ${weekId} saved` });
       if (typeof onConfirmed === 'function') onConfirmed(data);
       setStep(3);
     } catch (err) {
-      alert(`❌ ${err.response?.data?.message || 'Error confirming.'}`);
+      toast.error(`Error: ${err.response?.data?.message || 'Could not save.'}`);
     } finally {
       setConfirming(false);
     }
   };
+
+  // Mostrar cortes del restaurante
+  const lunchEnd = restaurant?.lunchEnd || '15:00';
+  const dinnerStart = restaurant?.dinnerStart || '17:00';
 
   return (
     <div style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: '16px', padding: '1.25rem' }}>
       <div style={{ marginBottom: '1rem' }}>
         <h2>Schedule Builder</h2>
         <p style={{ fontSize: '0.82rem', color: 'var(--ink-muted)', marginTop: '0.25rem' }}>
-          Select who works → review suggested times → adjust → confirm
+          Select who works → get suggestions → adjust → confirm
         </p>
+        {/* ✅ Mostrar cortes del restaurante */}
+        {restaurant && (
+          <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: 'var(--ink-muted)', display: 'flex', gap: '1rem' }}>
+            <span>🌅 Lunch ends: <strong>{lunchEnd}</strong></span>
+            <span>🌙 Dinner starts: <strong>{dinnerStart}</strong></span>
+            <button onClick={() => toast.info('Change in ⚙️ Settings')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.72rem', color: 'var(--rose-dark)', padding: 0 }}>
+              edit cuts ⚙️
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Steps indicator */}
+      {/* Steps */}
       <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.25rem' }}>
-        {['1. Who works?','2. Review & edit','3. Done'].map((label, i) => (
+        {['1. Who works?', '2. Review & edit', '3. Done'].map((label, i) => (
           <div key={i} style={{
             flex: 1, textAlign: 'center', padding: '0.5rem 0.25rem',
             borderRadius: '8px', fontSize: '0.72rem', fontWeight: '600',
@@ -226,7 +242,7 @@ export default function ScheduleBuilder({ staff, weekId, onConfirmed }) {
         ))}
       </div>
 
-      {/* STEP 1 */}
+      {/* STEP 1 — Seleccionar staff */}
       {step === 1 && (
         <div>
           {DAYS.map(day => {
@@ -281,7 +297,7 @@ export default function ScheduleBuilder({ staff, weekId, onConfirmed }) {
         </div>
       )}
 
-      {/* STEP 2 */}
+      {/* STEP 2 — Revisar y editar */}
       {step === 2 && (
         <div>
           {warnings.length > 0 && (
@@ -295,22 +311,55 @@ export default function ScheduleBuilder({ staff, weekId, onConfirmed }) {
             </div>
           )}
 
-          {Object.entries(editedShifts).map(([day, shifts]) => (
-            <div key={day} style={{ marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <strong style={{ fontSize: '0.9rem' }}>{day}</strong>
-                <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{shifts.length} shifts</span>
-              </div>
-              {shifts.map((shift, idx) => (
-                <ShiftCard key={idx} shift={shift} idx={idx} day={day}
-                  onUpdate={(i, f, v) => updateShift(day, i, f, v)}
-                  onUpdateSplit={(i, f, v) => updateSplit(day, i, f, v)}
-                />
-              ))}
-            </div>
-          ))}
+          {Object.entries(editedShifts).map(([day, shifts]) => {
+            // ✅ Separar por Lunch y Dinner según cortes del restaurante
+            const lunchShifts = shifts.filter(s => s.startTime <= lunchEnd);
+            const dinnerShifts = shifts.filter(s => s.startTime >= dinnerStart && !s.isSplit);
+            const splitShifts = shifts.filter(s => s.isSplit);
 
-          {/* Weekly hours summary */}
+            return (
+              <div key={day} style={{ marginBottom: '1.25rem' }}>
+                <div style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '0.75rem', paddingBottom: '0.4rem', borderBottom: '2px solid var(--border)' }}>
+                  {day}
+                  <span style={{ fontSize: '0.75rem', fontWeight: '400', color: 'var(--ink-muted)', marginLeft: '0.5rem' }}>
+                    {shifts.length} shifts
+                  </span>
+                </div>
+
+                {/* Lunch section */}
+                {(lunchShifts.length > 0 || splitShifts.length > 0) && (
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '700', color: '#b8860b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span>🌅 Lunch</span>
+                      <span style={{ fontWeight: '400', color: 'var(--ink-muted)' }}>{restaurant?.lunchStart || '10:30'} — {lunchEnd}</span>
+                    </div>
+                    {[...lunchShifts, ...splitShifts].map((shift, idx) => (
+                      <ShiftCard key={idx} shift={shift} idx={shifts.indexOf(shift)} day={day}
+                        onUpdate={(i, f, v) => updateShift(day, i, f, v)}
+                        onUpdateSplit={(i, f, v) => updateSplit(day, i, f, v)} />
+                    ))}
+                  </div>
+                )}
+
+                {/* Dinner section */}
+                {dinnerShifts.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '700', color: '#3949ab', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span>🌙 Dinner</span>
+                      <span style={{ fontWeight: '400', color: 'var(--ink-muted)' }}>{dinnerStart} — {restaurant?.dinnerEnd || '22:00'}</span>
+                    </div>
+                    {dinnerShifts.map((shift, idx) => (
+                      <ShiftCard key={idx} shift={shift} idx={shifts.indexOf(shift)} day={day}
+                        onUpdate={(i, f, v) => updateShift(day, i, f, v)}
+                        onUpdateSplit={(i, f, v) => updateSplit(day, i, f, v)} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Weekly hours */}
           {weeklyHours.length > 0 && (
             <div style={{ background: '#fff', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
               <strong style={{ fontSize: '0.85rem', display: 'block', marginBottom: '0.75rem' }}>Weekly hours</strong>
