@@ -20,7 +20,7 @@ export default function LoginPage() {
       const { data } = await API.post('/api/users/login', { email, password });
 
       if (data.requiresRestaurantSelection) {
-        // ✅ Superadmin — guardar datos temporales y redirigir al selector
+        // ✅ Superadmin — guardar con tempToken y redirigir al selector
         await login(data.user, data.tempToken);
         navigate('/select-restaurant');
         return;
@@ -58,8 +58,7 @@ export default function LoginPage() {
               <input id="password"
                 type={showPassword ? 'text' : 'password'}
                 value={password} onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••" required
-                style={{ paddingRight: '2.5rem' }} />
+                placeholder="••••••••" required style={{ paddingRight: '2.5rem' }} />
               <button type="button" onClick={() => setShowPassword(!showPassword)}
                 style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', color: 'var(--ink-muted)', padding: '0' }}>
                 {showPassword ? '🙈' : '👁️'}

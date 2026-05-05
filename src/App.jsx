@@ -17,12 +17,22 @@ function ProtectedRoute({ children, requireAdmin }) {
   return children;
 }
 
+// ✅ Redirige automáticamente según el rol al entrar
+function RootRedirect() {
+  const { user } = useAuth();
+  if (!user) return <LoginPage />;
+  if (user.role === 'superadmin') return <Navigate to="/select-restaurant" replace />;
+  if (user.role === 'admin') return <Navigate to="/admin-dashboard" replace />;
+  return <Navigate to="/employee-dashboard" replace />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<LoginPage />} />
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterRestaurant />} />
           <Route path="/select-restaurant" element={
             <ProtectedRoute><RestaurantSelector /></ProtectedRoute>
