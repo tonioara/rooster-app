@@ -11,15 +11,19 @@ function StepIndicator({ current }) {
       {STEPS.map((label, i) => (
         <div key={i} style={{ flex: 1, textAlign: 'center' }}>
           <div style={{
-            width: '28px', height: '28px', borderRadius: '50%', margin: '0 auto 4px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '0.75rem', fontWeight: '700',
+            width: '28px', height: '28px', borderRadius: '50%',
+            margin: '0 auto 4px', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', fontSize: '0.75rem', fontWeight: '700',
             background: i < current ? 'var(--rose)' : i === current ? 'var(--ink)' : 'var(--border)',
             color: i <= current ? '#fff' : 'var(--ink-muted)',
           }}>
             {i < current ? '✓' : i + 1}
           </div>
-          <div style={{ fontSize: '0.65rem', color: i === current ? 'var(--ink)' : 'var(--ink-muted)', fontWeight: i === current ? '700' : '400' }}>
+          <div style={{
+            fontSize: '0.65rem',
+            color: i === current ? 'var(--ink)' : 'var(--ink-muted)',
+            fontWeight: i === current ? '700' : '400',
+          }}>
             {label}
           </div>
         </div>
@@ -35,54 +39,38 @@ export default function RestaurantSetup() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Step 0 — Restaurant info
   const [info, setInfo] = useState({ name: '', address: '' });
-
-  // Step 1 — Hours
   const [hours, setHours] = useState({ openTime: '10:30', closeTime: '22:00' });
-
-  // Step 2 — Staff
   const [staffList, setStaffList] = useState([]);
-  const [newMember, setNewMember] = useState({ name: '', email: '', password: '', role: 'FOH', contractType: 'full-time', skills: '' });
+  const [newMember, setNewMember] = useState({
+    name: '', email: '', password: '',
+    role: 'FOH', contractType: 'full-time', skills: '',
+  });
   const [addingStaff, setAddingStaff] = useState(false);
-
-  // Restaurante creado
   const [restaurant, setRestaurant] = useState(null);
 
-  // ─── STEP 0 → 1: Guardar info del restaurante ───
+  // ─── STEP 0 → crear restaurante nuevo ───
   const handleSaveInfo = async () => {
     if (!info.name.trim()) return setError('Please enter a restaurant name.');
     setError('');
     setLoading(true);
     try {
-      // Actualizar o crear el restaurante
-      const { data } = await API.put('/api/restaurants/my', {
+      // ✅ Siempre crear nuevo restaurante desde el wizard
+      const { data } = await API.post('/api/restaurants/setup', {
         name: info.name,
         address: info.address,
       });
-      setRestaurant(data);
+      setRestaurant(data.restaurant);
+      await login(data.user, data.token);
       setStep(1);
     } catch (err) {
-      // Si no existe aún, crearlo
-      try {
-        const { data } = await API.post('/api/restaurants/setup', {
-          name: info.name,
-          address: info.address,
-          managerId: user._id,
-        });
-        setRestaurant(data.restaurant);
-        // Actualizar token con el nuevo restaurantId
-        await login(data.user, data.token);
-        setStep(1);
-      } catch (e) {
-        setError(e.response?.data?.message || 'Error saving restaurant info.');
-      }
+      setError(err.response?.data?.message || 'Error saving restaurant info.');
     } finally {
       setLoading(false);
     }
   };
 
-  // ─── STEP 1 → 2: Guardar horarios ───
+  // ─── STEP 1 → guardar horarios ───
   const handleSaveHours = async () => {
     setError('');
     setLoading(true);
@@ -99,7 +87,7 @@ export default function RestaurantSetup() {
     }
   };
 
-  // ─── STEP 2: Agregar staff ───
+  // ─── STEP 2 → agregar staff ───
   const handleAddMember = async (e) => {
     e.preventDefault();
     if (!newMember.name || !newMember.email || !newMember.password) {
@@ -125,19 +113,13 @@ export default function RestaurantSetup() {
     }
   };
 
-  const handleRemoveMember = (id) => {
-    setStaffList(prev => prev.filter(s => s._id !== id));
-  };
+  const handleRemoveMember = (id) => setStaffList(prev => prev.filter(s => s._id !== id));
 
-  const handleFinish = () => {
-    navigate('/admin-dashboard');
-  };
+  const handleFinish = () => navigate('/admin-dashboard');
 
   return (
     <div className="login-page" style={{ alignItems: 'flex-start', paddingTop: '2rem' }}>
       <div className="login-card" style={{ maxWidth: '500px' }}>
-
-        {/* Header */}
         <div className="login-brand" style={{ marginBottom: '1.25rem' }}>
           <span className="brand-icon">◈</span>
           <h1>RoosterApp</h1>
@@ -148,35 +130,38 @@ export default function RestaurantSetup() {
 
         {error && <div className="error-msg" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-        {/* ── STEP 0: Restaurant Info ── */}
+        {/* STEP 0 */}
         {step === 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             <div className="field-group">
               <label>Restaurant name *</label>
               <input type="text" value={info.name}
                 onChange={e => setInfo({ ...info, name: e.target.value })}
-                placeholder="e.g. Rooster Café" autoFocus />
+                placeholder="e.g. The Rabbit Restaurant" autoFocus />
             </div>
             <div className="field-group">
               <label>Address (optional)</label>
               <input type="text" value={info.address}
                 onChange={e => setInfo({ ...info, address: e.target.value })}
-                placeholder="e.g. Palermo, Buenos Aires" />
+                placeholder="e.g. Ashburton, New Zealand" />
             </div>
             <button className="btn-primary" onClick={handleSaveInfo} disabled={loading}
               style={{ padding: '0.85rem', marginTop: '0.5rem' }}>
               {loading ? 'Saving...' : 'Next →'}
             </button>
+            <button className="btn-ghost" onClick={() => navigate('/select-restaurant')}
+              style={{ textAlign: 'center' }}>
+              ← Back to restaurants
+            </button>
           </div>
         )}
 
-        {/* ── STEP 1: Hours ── */}
+        {/* STEP 1 */}
         {step === 1 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             <p style={{ fontSize: '0.85rem', color: 'var(--ink-muted)' }}>
               What are your opening hours?
             </p>
-
             <div style={{ display: 'flex', gap: '1rem' }}>
               <div className="field-group" style={{ flex: 1 }}>
                 <label>Opens at</label>
@@ -189,12 +174,9 @@ export default function RestaurantSetup() {
                   onChange={e => setHours({ ...hours, closeTime: e.target.value })} />
               </div>
             </div>
-
-            {/* Preview */}
             <div style={{ background: 'var(--cream)', borderRadius: '10px', padding: '0.85rem 1rem', border: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--ink-muted)', textAlign: 'center' }}>
               🕐 Open <strong style={{ color: 'var(--ink)' }}>{hours.openTime}</strong> — Close <strong style={{ color: 'var(--ink)' }}>{hours.closeTime}</strong>
             </div>
-
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button className="btn-ghost" onClick={() => setStep(0)} style={{ flex: 1 }}>← Back</button>
               <button className="btn-primary" onClick={handleSaveHours} disabled={loading} style={{ flex: 2 }}>
@@ -204,14 +186,13 @@ export default function RestaurantSetup() {
           </div>
         )}
 
-        {/* ── STEP 2: Add Staff ── */}
+        {/* STEP 2 */}
         {step === 2 && (
           <div>
             <p style={{ fontSize: '0.85rem', color: 'var(--ink-muted)', marginBottom: '1rem' }}>
               Add your team members. You can always add more later.
             </p>
 
-            {/* Staff ya agregado */}
             {staffList.length > 0 && (
               <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {staffList.map(member => (
@@ -234,7 +215,7 @@ export default function RestaurantSetup() {
                       <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '2px' }}>{member.email}</div>
                     </div>
                     <button onClick={() => handleRemoveMember(member._id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--rose-dark)', fontSize: '0.8rem', padding: '0.2rem 0.5rem' }}>
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--rose-dark)', fontSize: '0.8rem' }}>
                       ✕
                     </button>
                   </div>
@@ -242,12 +223,10 @@ export default function RestaurantSetup() {
               </div>
             )}
 
-            {/* Formulario nuevo miembro */}
             <form onSubmit={handleAddMember} style={{
-              background: 'var(--cream)', borderRadius: '12px',
-              padding: '1rem', border: '1px solid var(--border)',
-              display: 'flex', flexDirection: 'column', gap: '0.6rem',
-              marginBottom: '1rem',
+              background: 'var(--cream)', borderRadius: '12px', padding: '1rem',
+              border: '1px solid var(--border)', display: 'flex',
+              flexDirection: 'column', gap: '0.6rem', marginBottom: '1rem',
             }}>
               <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 + New team member
@@ -272,7 +251,6 @@ export default function RestaurantSetup() {
                   style={{ flex: 1 }}>
                   <option value="FOH">FOH — Bar / Floor</option>
                   <option value="BOH">BOH — Kitchen</option>
-                  <option value="admin">Admin</option>
                 </select>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -295,13 +273,15 @@ export default function RestaurantSetup() {
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button className="btn-ghost" onClick={() => setStep(1)} style={{ flex: 1 }}>← Back</button>
               <button className="btn-primary" onClick={() => setStep(3)} style={{ flex: 2 }}>
-                {staffList.length === 0 ? 'Skip for now →' : `Continue with ${staffList.length} member${staffList.length > 1 ? 's' : ''} →`}
+                {staffList.length === 0
+                  ? 'Skip for now →'
+                  : `Continue with ${staffList.length} member${staffList.length > 1 ? 's' : ''} →`}
               </button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 3: Done ── */}
+        {/* STEP 3 — Done */}
         {step === 3 && (
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
             <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>🎉</div>
