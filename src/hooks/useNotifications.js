@@ -1,48 +1,48 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
+import { toast } from 'sonner';
 import API from '../api/client';
 
 export function useAdminNotifications() {
+  const prevCountRef = useRef(0);
   const [pendingCount, setPendingCount] = useState(0);
-  const [toast, setToast] = useState(null);
-  const prevCountRef = useRef(null);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     try {
       const { data } = await API.get('/api/requests/pending');
-      const pending = data.filter(r => r.status === 'Pending');
-      const count = pending.length;
+      const requests = Array.isArray(data) ? data : [];
+      const pending = requests.filter(r => r.status === 'Pending');
+      const newCount = pending.length;
 
-      // Solo mostrar toast si ya teníamos un conteo previo y subió
-      if (prevCountRef.current !== null && count > prevCountRef.current) {
+      if (newCount > prevCountRef.current) {
         const newest = pending[pending.length - 1];
-        setToast({
-          message: `🔔 Nueva solicitud de ${newest.userId?.name || 'empleado'}`,
-          type: 'info'
+        const name = newest?.userId?.name || 'Someone';
+        const day = newest?.requestedDayOff || '';
+        const type = newest?.type;
+        toast(`🔔 New request from ${name}`, {
+          description: `${type === 'dayOff' ? 'Day off' : 'Schedule change'} — ${day}`,
+          duration: 6000,
         });
-        setTimeout(() => setToast(null), 5000);
       }
 
-      prevCountRef.current = count;
-      setPendingCount(count);
+      prevCountRef.current = newCount;
+      setPendingCount(newCount);
+      return newCount;
     } catch {
-      // silencioso
+      return 0;
     }
-  };
+  }, []);
 
   useEffect(() => {
     refresh();
-    const interval = setInterval(refresh, 10000);
+    const interval = setInterval(refresh, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [refresh]);
 
-  // ✅ Exportamos refresh para llamarlo después de aprobar/rechazar
-  return { pendingCount, toast, refresh };
+  return { pendingCount, refresh };
 }
 
 export function useEmployeeNotifications(userId) {
-  const [toast, setToast] = useState(null);
   const prevStatusRef = useRef({});
-  const initializedRef = useRef(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -50,42 +50,35 @@ export function useEmployeeNotifications(userId) {
     const check = async () => {
       try {
         const { data } = await API.get('/api/requests/pending');
-        const myRequests = data.filter(
-          r => r.userId?._id === userId || r.userId === userId
+        const requests = Array.isArray(data) ? data : [];
+        const mine = requests.filter(r =>
+          r.userId?._id === userId || r.userId === userId
         );
 
-        // Primera carga — guardar estados sin mostrar toast
-        if (!initializedRef.current) {
-          myRequests.forEach(req => {
-            prevStatusRef.current[req._id] = req.status;
-          });
-          initializedRef.current = true;
-          return;
-        }
-
-        myRequests.forEach(req => {
-          const prevStatus = prevStatusRef.current[req._id];
-          // ✅ Solo mostrar si cambió de Pending a otra cosa
-          if (prevStatus === 'Pending' && req.status !== 'Pending') {
-            setToast({
-              message: req.status === 'Approved'
-                ? `✅ Tu solicitud del ${req.requestedDayOff} fue aprobada por Amber`
-                : `❌ Tu solicitud del ${req.requestedDayOff} fue rechazada`,
-              type: req.status === 'Approved' ? 'success' : 'error'
-            });
-            setTimeout(() => setToast(null), 7000);
+        mine.forEach(req => {
+          const prev = prevStatusRef.current[req._id];
+          if (prev && prev !== req.status) {
+            if (req.status === 'Approved') {
+              toast.success('✅ Request approved', {
+                description: `Your day off for ${req.requestedDayOff} was approved`,
+                duration: 6000,
+              });
+            } else if (req.status === 'Rejected') {
+              toast.error('❌ Request rejected', {
+                description: `Your request for ${req.requestedDayOff} was not approved`,
+                duration: 6000,
+              });
+            }
           }
           prevStatusRef.current[req._id] = req.status;
         });
-      } catch {
-        // silencioso
-      }
+      } catch {}
     };
 
     check();
-    const interval = setInterval(check, 8000);
+    const interval = setInterval(check, 15000);
     return () => clearInterval(interval);
   }, [userId]);
 
-  return { toast };
+  return {};
 }

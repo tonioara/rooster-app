@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import API from '../api/client';
 import StaffTable from '../components/StaffTable';
 import RosterTable from '../components/RosterTable';
+import RosterEditor from '../components/RosterEditor';
 import RequestsPanel from '../components/RequestsPanel';
 import ScheduleBuilder from '../components/ScheduleBuilder';
 import RestaurantSettings from './RestaurantSettings';
-import Toast from '../components/Toast';
 import { useAdminNotifications } from '../hooks/useNotifications';
 import { getUpcomingWeeks } from '../utils/weekUtils';
 
@@ -23,7 +24,7 @@ export default function AdminDashboard() {
   const [showRequests, setShowRequests] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState('roster');
-  const { pendingCount, toast, refresh } = useAdminNotifications();
+  const { pendingCount, refresh } = useAdminNotifications();
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -34,7 +35,7 @@ export default function AdminDashboard() {
       const { data } = await API.get('/api/users/');
       setStaff(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error loading staff:', err.message);
+      toast.error('Error loading staff');
     }
   };
 
@@ -43,14 +44,15 @@ export default function AdminDashboard() {
   const handleLogout = () => { logout(); navigate('/'); };
   const handleSwitchRestaurant = () => navigate('/select-restaurant');
 
-  const handleGetRoster = async () => {
-    if (!weekId.trim()) return alert('⚠️ Please select a week.');
+  const handleGetRoster = async (wid) => {
+    const w = wid || weekId;
+    if (!w?.trim()) return toast.warning('Please select a week first.');
     setLoadingRoster(true);
     try {
-      const { data } = await API.get(`/api/roster/${weekId}`);
+      const { data } = await API.get(`/api/roster/${w}`);
       setRoster(data);
     } catch {
-      alert('❌ No roster found for this week.');
+      toast.error('No roster found for this week.');
       setRoster(null);
     } finally {
       setLoadingRoster(false);
@@ -59,6 +61,7 @@ export default function AdminDashboard() {
 
   const handleScheduleConfirmed = (data) => {
     setRoster(data.roster);
+    toast.success('✅ Schedule confirmed!', { description: `Week ${weekId} saved` });
     setActiveTab('roster');
   };
 
@@ -67,8 +70,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="dashboard">
-      <Toast toast={toast} />
-
       <header className="dash-header">
         <div className="dash-brand">
           <span className="brand-icon">◈</span>
@@ -84,31 +85,19 @@ export default function AdminDashboard() {
         <div className="dash-user">
           <span className="user-chip">{user?.name}</span>
           <span className="badge admin">{isSuperAdmin ? 'Super' : 'Admin'}</span>
-
-          {/* Settings */}
-          <button className="btn-ghost" onClick={() => setShowSettings(!showSettings)}
-            title="Restaurant settings" style={{ fontSize: '0.9rem' }}>
-            ⚙️
-          </button>
-
-          {/* Switch restaurant — solo superadmin */}
+          <button className="btn-ghost" onClick={() => setShowSettings(!showSettings)} title="Restaurant settings">⚙️</button>
           {isSuperAdmin && (
-            <button className="btn-ghost" onClick={handleSwitchRestaurant}
-              title="Switch restaurant" style={{ fontSize: '0.8rem' }}>
+            <button className="btn-ghost" onClick={handleSwitchRestaurant} style={{ fontSize: '0.8rem' }}>
               🏠 Switch
             </button>
           )}
-
-          <button className="btn-ghost"
-            onClick={() => setShowRequests(!showRequests)}
-            style={{ position: 'relative' }}>
+          <button className="btn-ghost" onClick={() => setShowRequests(!showRequests)} style={{ position: 'relative' }}>
             🔔
             {pendingCount > 0 && (
               <span style={{
                 position: 'absolute', top: '-6px', right: '-6px',
-                background: 'var(--rose)', color: '#fff',
-                borderRadius: '50%', width: '18px', height: '18px',
-                fontSize: '0.65rem', fontWeight: '700',
+                background: 'var(--rose)', color: '#fff', borderRadius: '50%',
+                width: '18px', height: '18px', fontSize: '0.65rem', fontWeight: '700',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 {pendingCount}
@@ -120,77 +109,87 @@ export default function AdminDashboard() {
       </header>
 
       <main className="dash-main">
-        {showRequests && (
-          <RequestsPanel onUpdate={() => { refresh(); fetchStaff(); }} />
-        )}
-
-        {/* ✅ Settings panel */}
-        {showSettings && (
-          <RestaurantSettings onClose={() => setShowSettings(false)} />
-        )}
+        {showRequests && <RequestsPanel onUpdate={() => { refresh(); fetchStaff(); }} />}
+        {showSettings && <RestaurantSettings onClose={() => setShowSettings(false)} />}
 
         <StaffTable staff={staff} onRefresh={fetchStaff} />
 
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button onClick={() => setActiveTab('roster')}
-            className={activeTab === 'roster' ? 'btn-primary' : 'btn-ghost'}
-            style={{ flex: 1 }}>
-            📋 View Roster
-          </button>
-          <button onClick={() => setActiveTab('builder')}
-            className={activeTab === 'builder' ? 'btn-accent' : 'btn-ghost'}
-            style={{ flex: 1 }}>
-            ⚡ Build Schedule
-          </button>
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: '0.4rem' }}>
+          {[
+            { id: 'roster', label: '📋 View' },
+            { id: 'builder', label: '⚡ Build' },
+            { id: 'edit', label: '✏️ Edit' },
+          ].map(tab => (
+            <button key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id);
+                if (tab.id === 'edit' && weekId && !roster) handleGetRoster();
+              }}
+              className={activeTab === tab.id ? 'btn-primary' : 'btn-ghost'}
+              style={{ flex: 1, fontSize: '0.82rem' }}>
+              {tab.label}
+            </button>
+          ))}
         </div>
 
+        {/* Selector de semana */}
+        <div style={{
+          background: 'var(--card)', border: '1.5px solid var(--border)',
+          borderRadius: '12px', padding: '0.85rem 1rem',
+          display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap',
+        }}>
+          <select value={weekId} onChange={e => setWeekId(e.target.value)} style={{ flex: 1, maxWidth: '280px' }}>
+            <option value="">Select a week...</option>
+            {WEEKS.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
+          </select>
+          {(activeTab === 'roster' || activeTab === 'edit') && (
+            <button className="btn-primary" onClick={() => handleGetRoster()} disabled={loadingRoster || !weekId}>
+              {loadingRoster ? 'Loading...' : 'Load'}
+            </button>
+          )}
+        </div>
+
+        {/* TAB: View */}
         {activeTab === 'roster' && (
           <div className="roster-section">
-            <div className="section-header">
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <h2>Roster</h2>
               <span style={{ fontSize: '0.8rem', color: 'var(--ink-muted)' }}>{today}</span>
             </div>
-            <div className="roster-query">
-              <select value={weekId} onChange={e => setWeekId(e.target.value)} style={{ maxWidth: '280px' }}>
-                <option value="">Select a week...</option>
-                {WEEKS.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
-              </select>
-              <button className="btn-primary" onClick={handleGetRoster} disabled={loadingRoster}>
-                {loadingRoster ? 'Loading...' : 'View'}
-              </button>
-            </div>
-            <RosterTable
-              rosterData={shiftsToShow}
-              weekId={roster?.weekId || weekId}
-              dateViewed={today}
-            />
+            <RosterTable rosterData={shiftsToShow} weekId={roster?.weekId || weekId} dateViewed={today} />
           </div>
         )}
 
+        {/* TAB: Build */}
         {activeTab === 'builder' && (
-          <div>
-            <div style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '1rem', marginBottom: '0.75rem' }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--ink-soft)', display: 'block', marginBottom: '0.4rem' }}>
-                Week to schedule
-              </label>
-              <select value={weekId} onChange={e => setWeekId(e.target.value)} style={{ maxWidth: '100%' }}>
-                <option value="">Select a week...</option>
-                {WEEKS.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
-              </select>
+          weekId ? (
+            <ScheduleBuilder
+              staff={staff.filter(s => s.role !== 'admin' && s.role !== 'superadmin')}
+              weekId={weekId}
+              onConfirmed={handleScheduleConfirmed}
+            />
+          ) : (
+            <div style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: '16px', padding: '2rem', textAlign: 'center', color: 'var(--ink-muted)' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📅</div>
+              <p>Select a week above to build the schedule</p>
             </div>
-            {weekId ? (
-              <ScheduleBuilder
-                staff={staff.filter(s => s.role !== 'admin' && s.role !== 'superadmin')}
-                weekId={weekId}
-                onConfirmed={handleScheduleConfirmed}
-              />
-            ) : (
-              <div style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: '16px', padding: '2rem', textAlign: 'center', color: 'var(--ink-muted)' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📅</div>
-                <p>Select a week above to start building the schedule</p>
-              </div>
-            )}
-          </div>
+          )
+        )}
+
+        {/* TAB: Edit */}
+        {activeTab === 'edit' && (
+          weekId && roster ? (
+            <RosterEditor roster={roster} weekId={weekId} onSaved={() => handleGetRoster()} />
+          ) : (
+            <div style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: '16px', padding: '2rem', textAlign: 'center', color: 'var(--ink-muted)' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>✏️</div>
+              <p style={{ marginBottom: '1rem' }}>Load a roster to start editing</p>
+              <button className="btn-primary" onClick={() => handleGetRoster()} disabled={!weekId || loadingRoster}>
+                {loadingRoster ? 'Loading...' : 'Load roster'}
+              </button>
+            </div>
+          )
         )}
       </main>
     </div>
